@@ -14,6 +14,10 @@ Based on the <a href="https://github.com/catppuccin/catppuccin/tree/main/">Catpp
 Check out the demo! :)
 > https://fossisawesome.github.io/pretty-startpage/
 
+---
+
+## Pictures
+
 ## Usage
 
 1. Fork this repo.
