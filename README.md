@@ -17,7 +17,7 @@ Check out the demo! :)
 ---
 
 ## Pictures
-<img src="https://raw.githubusercontent.com/fossisawesome/pretty-startpage/refs/heads/main/assets/showcase.png" height="30" width="30px"/>
+<img src="https://raw.githubusercontent.com/fossisawesome/pretty-startpage/refs/heads/main/assets/showcase.png" height="200" width="200px"/>
 
 ## Usage
 
