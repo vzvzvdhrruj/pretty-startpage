@@ -1,6 +1,8 @@
 <h3 align="center">
   Pretty Startpage
-  A simple, customizable new tab page/start page for your browser. Based on the <a href="https://github.com/catppuccin/catppuccin/tree/main/">Catppuccin</a> Mocha color pallete!
+  
+A simple, customizable new tab page/start page for your browser.
+Based on the <a href="https://github.com/catppuccin/catppuccin/tree/main/">Catppuccin</a> Mocha color pallete!
 
 ---
 
