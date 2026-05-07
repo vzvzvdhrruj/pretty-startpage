@@ -2,7 +2,7 @@ const DEFAULTS = {
   searchUrl: "https://duckduckgo.com/?q={q}",
   hourFormat: "auto",
   timezone: "system",
-  clockFont: "'Roboto Mono', monospace"
+  clockFont: "'MPlus Nerd Font', 'M PLUS 1 Code', monospace"
 };
 
 const PRESETS = {
@@ -42,7 +42,7 @@ function applySettings(s) {
   clockFontSelect.value = s.clockFont;
   clockEl.style.fontFamily = s.clockFont;
   updateTZLabel(s.timezone);
-  qInput.placeholder=`${searchUrlInput.value.replace(/https?:\/\/(www\.)?|\..*/g, '').at(0).toUpperCase() + searchUrlInput.value.replace(/https?:\/\/(www\.)?|\..*/g, '').slice(1)} Search`
+  qInput.placeholder = `${searchUrlInput.value.replace(/https?:\/\/(www\.)?|\..*/g, '').at(0).toUpperCase() + searchUrlInput.value.replace(/https?:\/\/(www\.)?|\..*/g, '').slice(1)} Search`;
 }
 
 function updateTZLabel(tz) {
@@ -52,7 +52,7 @@ function updateTZLabel(tz) {
 function renderClock() {
   const s = loadSettings();
   const tz = s.timezone === 'system' ? undefined : s.timezone;
-  
+
   const opts = { timeStyle: 'short' };
 
   if (s.hourFormat === '12') opts.hour12 = true;
@@ -69,14 +69,12 @@ function renderClock() {
 
 const presetSelect = document.getElementById('searchEnginePreset');
 
-// Sync preset dropdown → URL field
 presetSelect.addEventListener('change', () => {
   if (presetSelect.value !== 'custom') {
     searchUrlInput.value = presetSelect.value;
   }
 });
 
-// Sync URL field → preset dropdown
 searchUrlInput.addEventListener('input', () => {
   presetSelect.value = PRESETS[searchUrlInput.value.trim()] ? searchUrlInput.value.trim() : 'custom';
 });
