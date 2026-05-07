@@ -24,4 +24,4 @@ You can adjust basic settings directly within the UI.
 ## Demo
 
 Check out the demo! :)
->  https://vzvzvdhrruj.github.io/pretty-startpage/
+>  https://vzvzvdhrruj.github.io/pretty-startpage/](https://fossisawesome.github.io/pretty-startpage/
