@@ -36,3 +36,4 @@ You can adjust basic settings directly within the UI.
 
 > Tip: You can customize it more by editing the files directly, but I will try to make the settings more advanced later.
 
+Add me on discord! *goybsd*
