@@ -1,8 +1,11 @@
 <h1 align="center">
   Pretty Startpage
-  
+</h1>
+
+<h3 align="center">
 A simple, customizable new tab page/start page for your browser.
 Based on the <a href="https://github.com/catppuccin/catppuccin/tree/main/">Catppuccin</a> Mocha color pallete!
+</h3>
 
 ---
 
