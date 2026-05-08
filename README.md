@@ -40,5 +40,13 @@ You can adjust basic settings directly within the UI.
 
 ---
 
+## Credits
+
+*HotCoffeeYT*
+   * Did a PR, and added placeholder stuff.
+*@foodisyum*
+   * Recommended I add a pictures section.
+---
+
 Add me on discord! ***goybsd***
 :)
