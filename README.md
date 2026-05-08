@@ -44,6 +44,7 @@ You can adjust basic settings directly within the UI.
 
 *HotCoffeeYT*
    * Did a PR, and added placeholder stuff.
+
 *@foodisyum*
    * Recommended I add a pictures section.
 ---
