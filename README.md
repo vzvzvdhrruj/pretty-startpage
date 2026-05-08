@@ -24,13 +24,13 @@ Check out the demo! :)
 
 **WARNING!** Make sure your link has `web/` at the end! Example: `https://yourgithubusername.github.io/yourforksname/web/`
 
-1. Fork this repo.
-2. Enable GitHub Pages: 
+Fork this repo.
+Enable GitHub Pages: 
    * Go to your fork's settings tab.
    * Click pages in the left sidebar.
    * Select the `main` branch as your source and click save.
    * Save your Github Pages URL somewhere
-3. Setting as startup/homepage (Chromium):
+Setting as startup/homepage (Chromium):
    * On most chromium based browsers (Chrome, Brave, Vivaldi, Helium) you can set a custom startup page in the settings.
    * Click the 3 dots in the top right corner.
    * Click "On Startup"
