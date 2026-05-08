@@ -31,13 +31,38 @@ Enable GitHub Pages:
    * Click pages in the left sidebar.
    * Select the `main` branch as your source and click save.
    * Save your Github Pages URL somewhere
-
+---
 Setting as startup/homepage (Chromium):
-   * On most chromium based browsers (Chrome, Brave, Vivaldi, Helium) you can set a custom startup page in the settings.
    * Click the 3 dots in the top right corner.
-   * Click "On Startup"
+   * Click "Settings"
+   * Click "On Startup".
    * Cilck "Open a specfic page, or set of pages.
-   * Put in the URL you got. (exp: `https://yourgithubusername.github.io/yourforksname`)
+   * Put in the URL you got. (ex: `https://yourgithubusername.github.io/yourforksname`)
+   * Save!
+   -
+Set as new tab page (Chromium)
+   * Add the Custom New Tab URL extension (`https://chromewebstore.google.com/detail/custom-new-tab-url/mmjbdbjnoablegbkcklggeknkfcjkjia`)
+   * Click the 3 dots in the top right corner.
+   * Click "Extensions"
+   * Click Custom New Tab URL
+   * Click "Extension Options"
+   * Check "Enabled"
+   * Under "URL or local file path" put in your URL (ex: `https://yourgithubusername.github.io/yourforksname`)
+   * Save!
+---
+Setting as startup/homepage (Firefox)
+   * Click the hamburger menu in the top right corner (or goto about:preferences#home).
+   * Click "Home".
+   * Click "Homepage and new windows", and set to custom URLs.
+   * Put in the URL you got. (ex: `https://yourgithubusername.github.io/yourforksname`)
+   * Save!
+   -
+Set as new tab page (Firefox)
+   * Add the Custom New Tab Page extension (`https://addons.mozilla.org/en-US/firefox/addon/custom-new-tab-page/`)
+   * Open `Add-ons` from the `Menu` (or navigate to `about:addons` with the address bar)
+   * Select `Extensions`
+   * Select the `Custom New Tab Page` extension > `Options`
+   * Enter your URL in the `New Tab URL` box
    * Save!
 
 ---
