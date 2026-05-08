@@ -29,6 +29,14 @@ Check out the demo! :)
    * Go to your fork's settings tab.
    * Click pages in the left sidebar.
    * Select the `main` branch as your source and click save.
+   * Save your Github Pages URL somewhere
+3. Setting as startup/homepage (Chromium):
+   * On most chromium based browsers (Chrome, Brave, Vivaldi, Helium) you can set a custom startup page in the settings.
+   * Click the 3 dots in the top right corner.
+   * Click "On Startup"
+   * Cilck "Open a specfic page, or set of pages.
+   * Put in the URL you got. (exp: `https://yourgithubusername.github.io/yourforksname`)
+   * Save!
 
 ---
 
