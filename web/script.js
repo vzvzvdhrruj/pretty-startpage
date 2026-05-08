@@ -10,6 +10,7 @@ const PRESETS = {
   "https://www.google.com/search?q={q}": "Google",
   "https://www.startpage.com/search?q={q}": "Startpage",
   "https://www.qwant.com/?q={q}": "Qwant"
+  "https://yandex.com/search/?text={q}": "Yandex"
 };
 
 const modal = document.getElementById('modal');
