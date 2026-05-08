@@ -39,7 +39,7 @@ Setting as startup/homepage (Chromium):
    * Cilck "Open a specfic page, or set of pages.
    * Put in the URL you got. (ex: `https://yourgithubusername.github.io/yourforksname`)
    * Save!
-   -
+-
 Set as new tab page (Chromium)
    * Add the Custom New Tab URL extension (`https://chromewebstore.google.com/detail/custom-new-tab-url/mmjbdbjnoablegbkcklggeknkfcjkjia`)
    * Click the 3 dots in the top right corner.
@@ -56,7 +56,7 @@ Setting as startup/homepage (Firefox)
    * Click "Homepage and new windows", and set to custom URLs.
    * Put in the URL you got. (ex: `https://yourgithubusername.github.io/yourforksname`)
    * Save!
-   -
+-
 Set as new tab page (Firefox)
    * Add the Custom New Tab Page extension (`https://addons.mozilla.org/en-US/firefox/addon/custom-new-tab-page/`)
    * Open `Add-ons` from the `Menu` (or navigate to `about:addons` with the address bar)
