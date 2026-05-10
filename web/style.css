@@ -451,7 +451,8 @@ small { font-size: 12px; color: var(--subtext); }
   transition: opacity 0.15s;
 }
 .btn-primary:hover { opacity: 0.88; }
-.btn-primary:focus { outline: 2px solid var(--text); outline-offset: 2px; }
+.btn-primary:focus { outline: none; }
+.btn-primary:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
 
 .btn-ghost {
   padding: 10px 14px;
@@ -503,6 +504,7 @@ small { font-size: 12px; color: var(--subtext); }
   color: var(--subtext);
   z-index: 5;
   pointer-events: none;
+  transition: color 0.2s ease;
 }
 
 ::-webkit-scrollbar { width: 6px; }

@@ -2,6 +2,40 @@ const GRID = 20;
 
 const GLOBAL_DEFAULTS = {
   searchUrl: "https://duckduckgo.com/?q={q}",
+  theme: "mocha",
+};
+
+const THEMES = {
+  mocha: {
+    name: "Catppuccin Mocha",
+    colors: {
+      "--bg":      "#11111b",
+      "--surface": "#1e1e2e",
+      "--surface2":"#181825",
+      "--text":    "#cdd6f4",
+      "--subtext": "#a6adc8",
+      "--accent":  "#cba6f7",
+      "--accent2": "#89b4fa",
+      "--border":  "#313244",
+      "--red":     "#f38ba8",
+      "--green":   "#a6e3a1",
+    }
+  },
+  latte: {
+    name: "Catppuccin Latte",
+    colors: {
+      "--bg":      "#eff1f5",
+      "--surface": "#e6e9f0",
+      "--surface2":"#dce0e8",
+      "--text":    "#4c4f69",
+      "--subtext": "#626d83",
+      "--accent":  "#d20f39",
+      "--accent2": "#1e66f5",
+      "--border":  "#bcc0cc",
+      "--red":     "#d20f39",
+      "--green":   "#40a02b",
+    }
+  }
 };
 
 const PRESETS = {
@@ -230,6 +264,18 @@ let state = {
   editMode: false,
 };
 
+let globalSettings = {
+  searchUrl: GLOBAL_DEFAULTS.searchUrl,
+  theme: GLOBAL_DEFAULTS.theme,
+};
+
+function loadGlobalSettings() {
+  try {
+    const g = localStorage.getItem('startpage-global');
+    if (g) globalSettings = { ...globalSettings, ...JSON.parse(g) };
+  } catch {}
+}
+
 function loadState() {
   try {
     const s = localStorage.getItem('startpage-v2');
@@ -254,6 +300,20 @@ function uid() {
 
 function snap(v) {
   return Math.round(v / GRID) * GRID;
+}
+
+function applyTheme(themeName) {
+  const theme = THEMES[themeName];
+  if (!theme) return;
+  Object.entries(theme.colors).forEach(([key, value]) => {
+    document.documentElement.style.setProperty(key, value);
+  });
+}
+
+function updateFooter() {
+  const footer = document.getElementById('footer');
+  const themeName = THEMES[globalSettings.theme]?.name || 'Catppuccin Mocha';
+  footer.textContent = `${themeName} :)`;
 }
 
 const canvas = document.getElementById('canvas');
@@ -514,10 +574,19 @@ const modal          = document.getElementById('modal');
 const openSettings   = document.getElementById('openSettings');
 const closeBtn       = document.getElementById('closeBtn');
 const saveBtn        = document.getElementById('saveBtn');
+const themeSelect    = document.getElementById('theme');
 const searchUrlInput = document.getElementById('searchUrl');
 const presetSelect   = document.getElementById('searchEnginePreset');
 
-openSettings.addEventListener('click', () => modal.classList.add('open'));
+openSettings.addEventListener('click', () => {
+  // Load current settings into form
+  themeSelect.value = globalSettings.theme;
+  searchUrlInput.value = globalSettings.searchUrl;
+  // Update preset if it matches
+  presetSelect.value = PRESETS[globalSettings.searchUrl] ? globalSettings.searchUrl : 'custom';
+  modal.classList.add('open');
+});
+
 closeBtn.addEventListener('click', () => modal.classList.remove('open'));
 modal.addEventListener('click', e => { if (e.target === modal) modal.classList.remove('open'); });
 
@@ -529,8 +598,14 @@ searchUrlInput.addEventListener('input', () => {
 });
 
 saveBtn.addEventListener('click', () => {
-  const g = { searchUrl: searchUrlInput.value.trim() || GLOBAL_DEFAULTS.searchUrl };
-  localStorage.setItem('startpage-global', JSON.stringify(g));
+  globalSettings.searchUrl = searchUrlInput.value.trim() || GLOBAL_DEFAULTS.searchUrl;
+  globalSettings.theme = themeSelect.value;
+  
+  localStorage.setItem('startpage-global', JSON.stringify(globalSettings));
+  
+  applyTheme(globalSettings.theme);
+  updateFooter();
+  
   modal.classList.remove('open');
 });
 
@@ -550,5 +625,8 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
+loadGlobalSettings();
 loadState();
+applyTheme(globalSettings.theme);
+updateFooter();
 renderAll();
