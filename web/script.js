@@ -35,6 +35,36 @@ const THEMES = {
       "--red":     "#d20f39",
       "--green":   "#40a02b",
     }
+  },
+  frappe: {
+    name: "Catppuccin Frappe",
+    colors: {
+      "--bg":      "#292c3c",
+      "--surface": "#303446",
+      "--surface2":"#292c3c",
+      "--text":    "#c6d0f5",
+      "--subtext": "#949cbb",
+      "--accent":  "#ca9ee6",
+      "--accent2": "#85c1dc",
+      "--border":  "#414559",
+      "--red":     "#e78284",
+      "--green":   "#a6d189",
+    }
+  },
+  macchiato: {
+    name: "Catppuccin Macchiato",
+    colors: {
+      "--bg":      "#24273a",
+      "--surface": "#2e303e",
+      "--surface2":"#1e1e2e",
+      "--text":    "#cad3f5",
+      "--subtext": "#8087a2",
+      "--accent":  "#c6a0f6",
+      "--accent2": "#8aadf4",
+      "--border":  "#3b3f52",
+      "--red":     "#ed8796",
+      "--green":   "#a6da95",
+    }
   }
 };
 
@@ -303,11 +333,7 @@ function snap(v) {
 }
 
 function applyTheme(themeName) {
-  const theme = THEMES[themeName];
-  if (!theme) return;
-  Object.entries(theme.colors).forEach(([key, value]) => {
-    document.documentElement.style.setProperty(key, value);
-  });
+  document.documentElement.setAttribute('data-theme', themeName);
 }
 
 function updateFooter() {
@@ -579,10 +605,8 @@ const searchUrlInput = document.getElementById('searchUrl');
 const presetSelect   = document.getElementById('searchEnginePreset');
 
 openSettings.addEventListener('click', () => {
-  // Load current settings into form
   themeSelect.value = globalSettings.theme;
   searchUrlInput.value = globalSettings.searchUrl;
-  // Update preset if it matches
   presetSelect.value = PRESETS[globalSettings.searchUrl] ? globalSettings.searchUrl : 'custom';
   modal.classList.add('open');
 });
