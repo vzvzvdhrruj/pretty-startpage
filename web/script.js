@@ -1,7 +1,6 @@
 const GRID = 20;
 
 const GLOBAL_DEFAULTS = {
-  searchUrl: "https://duckduckgo.com/?q={q}",
   theme: "mocha",
 };
 
@@ -76,6 +75,23 @@ const PRESETS = {
   "https://yandex.com/search/?text={q}": "Yandex"
 };
 
+const activeAbortControllers = new Map();
+let focalNodeMarker = null;
+
+function escapeHtml(str) {
+  if (typeof str !== 'string') return str;
+  return str.replace(/[&<>"']/g, (m) => {
+    switch (m) {
+      case '&': return '&amp;';
+      case '<': return '&lt;';
+      case '>': return '&gt;';
+      case '"': return '&quot;';
+      case "'": return '&#039;';
+      default: return m;
+    }
+  });
+}
+
 const WIDGET_DEFS = {
   clock: {
     label: "Clock",
@@ -100,7 +116,7 @@ const WIDGET_DEFS = {
     _update(el, settings) {
       const timeEl = el.querySelector('.w-clock-time');
       const tzEl = el.querySelector('.w-clock-tz');
-      if (!timeEl) return;
+      if (!timeEl || !tzEl) return;
       const tz = settings.timezone === 'system' ? undefined : settings.timezone;
       const opts = { timeStyle: settings.showSeconds ? 'medium' : 'short' };
       if (settings.hourFormat === '12') opts.hour12 = true;
@@ -131,7 +147,7 @@ const WIDGET_DEFS = {
         </div>
         <div class="form-group">
           <label>Timezone (IANA)</label>
-          <input type="text" name="timezone" value="${settings.timezone}" placeholder="system, UTC, Europe/London" />
+          <input type="text" name="timezone" value="${escapeHtml(settings.timezone)}" placeholder="system, UTC, Europe/London" />
           <small>Type "system" for your local timezone</small>
         </div>
         <div class="form-group">
@@ -172,9 +188,9 @@ const WIDGET_DEFS = {
       const engineName = this._engineName(settings.searchUrl);
       el.innerHTML = `
         <div class="w-search">
-          <form class="w-search-form" id="searchForm-${el.closest('.widget').dataset.id}">
-            <input class="search-input" type="text" placeholder="${settings.placeholder || 'Search ' + engineName + '…'}" autocomplete="off" />
-            <button class="btn-primary" type="submit">Search</button>
+          <form class="w-search-form">
+            <input class="search-input" type="text" placeholder="${escapeHtml(settings.placeholder || 'Search ' + engineName + '…')}" autocomplete="off" aria-label="Web target keyword query lookup input payload box" />
+            <button class="btn-primary" type="submit" aria-label="Execute keyword navigation submit query action">Search</button>
           </form>
         </div>`;
       const form = el.querySelector('form');
@@ -184,7 +200,6 @@ const WIDGET_DEFS = {
         if (!q) return;
         window.location.href = settings.searchUrl.replace('{q}', encodeURIComponent(q));
       });
-      window._searchWidgetInput = el.querySelector('input');
     },
     _engineName(url) {
       try { return new URL(url).hostname.replace('www.','').split('.')[0]; } catch { return 'web'; }
@@ -205,11 +220,12 @@ const WIDGET_DEFS = {
         </div>
         <div class="form-group">
           <label>Custom URL (use {q} for query)</label>
-          <input type="text" name="searchUrl" id="swUrl" value="${settings.searchUrl}" />
+          <input type="text" name="searchUrl" id="swUrl" value="${escapeHtml(settings.searchUrl)}" />
+          <small>DuckDuckGo: https://duckduckgo.com/?q={q} · Google: https://www.google.com/search?q={q}</small>
         </div>
         <div class="form-group">
           <label>Placeholder text</label>
-          <input type="text" name="placeholder" value="${settings.placeholder || ''}" placeholder="Search the web…" />
+          <input type="text" name="placeholder" value="${escapeHtml(settings.placeholder || '')}" placeholder="Search the web…" />
         </div>`;
     },
     readForm(form) {
@@ -235,42 +251,97 @@ const WIDGET_DEFS = {
     },
     async _fetch(el, settings) {
       const box = el.querySelector('.w-weather');
+      const widgetElement = el.closest('.widget');
+      if (!widgetElement) return;
+      const widgetId = widgetElement.dataset.id;
+      
+      if (activeAbortControllers.has(widgetId)) {
+        activeAbortControllers.get(widgetId).abort();
+      }
+      const controller = new AbortController();
+      activeAbortControllers.set(widgetId, controller);
+
       try {
-        const geo = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(settings.city)}&count=1`);
+        const geo = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(settings.city)}&count=1`, { signal: controller.signal });
+        if (!geo.ok) throw new Error('Geocoding network response error');
         const geoData = await geo.json();
         if (!geoData.results?.length) {
-          box.innerHTML = `<div class="w-weather-error">City not found: ${settings.city}</div>`;
+          box.innerHTML = '';
+          const errEl = document.createElement('div');
+          errEl.className = 'w-weather-error';
+          errEl.textContent = `City not found: ${settings.city}`;
+          box.appendChild(errEl);
           return;
         }
         const { latitude, longitude, name, country } = geoData.results[0];
         const unit = settings.units === 'imperial' ? 'fahrenheit' : 'celsius';
-        const wx = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current_weather=true&temperature_unit=${unit}&wind_speed_unit=kmh`);
+        const wx = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current_weather=true&temperature_unit=${unit}&wind_speed_unit=kmh`, { signal: controller.signal });
+        if (!wx.ok) throw new Error('Weather network response error');
         const wxData = await wx.json();
         const cw = wxData.current_weather;
         const deg = settings.units === 'imperial' ? '°F' : '°C';
-        box.innerHTML = `
-          <div class="w-weather-inner">
-            <div class="w-weather-info">
-              <div class="w-weather-temp">${Math.round(cw.temperature)}${deg}</div>
-              <div class="w-weather-desc">${this._desc(cw.weathercode)}</div>
-              <div class="w-weather-city">${name}, ${country}</div>
-              <div class="w-weather-wind">Wind ${cw.windspeed} km/h</div>
-            </div>
-          </div>`;
-      } catch {
-        box.innerHTML = `<div class="w-weather-error">Unable to load weather</div>`;
+        
+        box.innerHTML = '';
+        const inner = document.createElement('div');
+        inner.className = 'w-weather-inner';
+        const info = document.createElement('div');
+        info.className = 'w-weather-info';
+        
+        const tempEl = document.createElement('div');
+        tempEl.className = 'w-weather-temp';
+        tempEl.textContent = `${Math.round(cw.temperature)}${deg}`;
+        
+        const descEl = document.createElement('div');
+        descEl.className = 'w-weather-desc';
+        descEl.textContent = this._desc(cw.weathercode);
+        
+        const cityEl = document.createElement('div');
+        cityEl.className = 'w-weather-city';
+        cityEl.textContent = `${name}, ${country}`;
+        
+        const windEl = document.createElement('div');
+        windEl.className = 'w-weather-wind';
+        windEl.textContent = `Wind ${cw.windspeed} km/h`;
+        
+        info.appendChild(tempEl);
+        info.appendChild(descEl);
+        info.appendChild(cityEl);
+        info.appendChild(windEl);
+        inner.appendChild(info);
+        box.appendChild(inner);
+      } catch (err) {
+        if (err.name !== 'AbortError') {
+          box.innerHTML = '';
+          const errEl = document.createElement('div');
+          errEl.className = 'w-weather-error';
+          errEl.textContent = 'Unable to load weather';
+          box.appendChild(errEl);
+        }
+      } finally {
+        if (activeAbortControllers.get(widgetId) === controller) {
+          activeAbortControllers.delete(widgetId);
+        }
       }
     },
     _desc(code) {
       const map = {0:'Clear sky',1:'Mainly clear',2:'Partly cloudy',3:'Overcast',45:'Foggy',48:'Icy fog',51:'Light drizzle',61:'Light rain',63:'Moderate rain',65:'Heavy rain',71:'Light snow',73:'Moderate snow',75:'Heavy snow',80:'Rain showers',81:'Moderate showers',82:'Heavy showers',95:'Thunderstorm',99:'Thunderstorm with hail'};
       return map[code] || 'Unknown';
     },
-    cleanup() {},
+    cleanup(el) {
+      const widgetElement = el.closest('.widget');
+      if (widgetElement) {
+        const widgetId = widgetElement.dataset.id;
+        if (activeAbortControllers.has(widgetId)) {
+          activeAbortControllers.get(widgetId).abort();
+          activeAbortControllers.delete(widgetId);
+        }
+      }
+    },
     settingsForm(settings) {
       return `
         <div class="form-group">
           <label>City</label>
-          <input type="text" name="city" value="${settings.city}" placeholder="London, New York, Tokyo…" />
+          <input type="text" name="city" value="${escapeHtml(settings.city)}" placeholder="London, New York, Tokyo…" />
         </div>
         <div class="form-group">
           <label>Units</label>
@@ -295,7 +366,6 @@ let state = {
 };
 
 let globalSettings = {
-  searchUrl: GLOBAL_DEFAULTS.searchUrl,
   theme: GLOBAL_DEFAULTS.theme,
 };
 
@@ -303,14 +373,18 @@ function loadGlobalSettings() {
   try {
     const g = localStorage.getItem('startpage-global');
     if (g) globalSettings = { ...globalSettings, ...JSON.parse(g) };
-  } catch {}
+  } catch (e) {
+    console.error(e);
+  }
 }
 
 function loadState() {
   try {
     const s = localStorage.getItem('startpage-v2');
     if (s) state = JSON.parse(s);
-  } catch {}
+  } catch (e) {
+    console.error(e);
+  }
   if (!state.widgets.length) {
     const cw = window.innerWidth, ch = window.innerHeight;
     state.widgets = [
@@ -321,7 +395,11 @@ function loadState() {
 }
 
 function saveState() {
-  localStorage.setItem('startpage-v2', JSON.stringify(state));
+  try {
+    localStorage.setItem('startpage-v2', JSON.stringify(state));
+  } catch (e) {
+    console.error(e);
+  }
 }
 
 function uid() {
@@ -340,6 +418,41 @@ function updateFooter() {
   const footer = document.getElementById('footer');
   const themeName = THEMES[globalSettings.theme]?.name || 'Catppuccin Mocha';
   footer.textContent = `${themeName} :)`;
+}
+
+function trackOverlayOpening(el) {
+  focalNodeMarker = document.activeElement;
+  const elements = el.querySelectorAll('button, input, select, textarea');
+  if (elements.length) {
+    setTimeout(() => elements[0].focus(), 30);
+  }
+}
+
+function restoreOverlayFocus() {
+  if (focalNodeMarker && typeof focalNodeMarker.focus === 'function') {
+    focalNodeMarker.focus();
+  }
+  focalNodeMarker = null;
+}
+
+function handleFocusTrapping(e, el) {
+  const elements = el.querySelectorAll('button, input, select, textarea');
+  if (!elements.length) return;
+  const first = elements[0];
+  const last = elements[elements.length - 1];
+  if (e.key === 'Tab') {
+    if (e.shiftKey) {
+      if (document.activeElement === first) {
+        last.focus();
+        e.preventDefault();
+      }
+    } else {
+      if (document.activeElement === last) {
+        first.focus();
+        e.preventDefault();
+      }
+    }
+  }
 }
 
 const canvas = document.getElementById('canvas');
@@ -363,12 +476,12 @@ function renderAll() {
       el.dataset.type = w.type;
       el.innerHTML = `
         <div class="widget-edit-bar">
-          <button class="widget-settings-btn" title="Widget settings">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <button class="widget-settings-btn" title="Widget settings" aria-label="Open modular layout element property configurations selection engine">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06A2 2 0 0 1 4.29 17l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06A2 2 0 0 1 7.04 4.3l.06.06A1.65 1.65 0 0 0 8.92 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
             </svg>
           </button>
-          <button class="widget-remove-btn" title="Remove widget">✕</button>
+          <button class="widget-remove-btn" title="Remove widget" aria-label="Erase this element interface instance container from platform storage memory layout">✕</button>
         </div>
         <div class="widget-body"></div>
         <div class="resize-handle resize-e"></div>
@@ -418,70 +531,80 @@ function removeWidget(id) {
 }
 
 function makeDraggable(el, wData) {
-  let startX, startY, startLeft, startTop, dragging = false;
+  let startX, startY, startLeft, startTop;
+
+  const onMouseMove = (e) => {
+    const nx = snap(startLeft + e.clientX - startX);
+    const ny = snap(startTop  + e.clientY - startY);
+    const boundX = Math.max(0, window.innerWidth - el.offsetWidth);
+    const boundY = Math.max(0, window.innerHeight - el.offsetHeight);
+    wData.x = Math.max(0, Math.min(boundX, nx));
+    wData.y = Math.max(0, Math.min(boundY, ny));
+    el.style.left = wData.x + 'px';
+    el.style.top  = wData.y + 'px';
+  };
+
+  const onMouseUp = () => {
+    el.classList.remove('dragging');
+    el.style.zIndex = '';
+    document.removeEventListener('mousemove', onMouseMove);
+    document.removeEventListener('mouseup', onMouseUp);
+    saveState();
+  };
 
   el.addEventListener('mousedown', (e) => {
     if (!state.editMode) return;
     if (e.target.closest('.resize-handle') || e.target.closest('.widget-edit-bar')) return;
     e.preventDefault();
-    dragging = true;
     startX = e.clientX;
     startY = e.clientY;
     startLeft = wData.x;
     startTop  = wData.y;
     el.classList.add('dragging');
     el.style.zIndex = 999;
-  });
-
-  document.addEventListener('mousemove', (e) => {
-    if (!dragging) return;
-    const nx = snap(startLeft + e.clientX - startX);
-    const ny = snap(startTop  + e.clientY - startY);
-    wData.x = Math.max(0, nx);
-    wData.y = Math.max(0, ny);
-    el.style.left = wData.x + 'px';
-    el.style.top  = wData.y + 'px';
-  });
-
-  document.addEventListener('mouseup', () => {
-    if (!dragging) return;
-    dragging = false;
-    el.classList.remove('dragging');
-    el.style.zIndex = '';
-    saveState();
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
   });
 }
 
 function makeResizable(el, wData) {
   el.querySelectorAll('.resize-handle').forEach(handle => {
-    let startX, startY, startW, startH, resizing = false;
+    let startX, startY, startW, startH;
     const dir = handle.classList[1];
+
+    const onMouseMove = (e) => {
+      const dx = e.clientX - startX;
+      const dy = e.clientY - startY;
+      if (dir === 'resize-e' || dir === 'resize-se') {
+        const calculatedW = snap(startW + dx);
+        const maxBoundW = window.innerWidth - wData.x;
+        wData.w = Math.max(160, Math.min(maxBoundW, calculatedW));
+      }
+      if (dir === 'resize-s' || dir === 'resize-se') {
+        const calculatedH = snap(startH + dy);
+        const maxBoundH = window.innerHeight - wData.y;
+        wData.h = Math.max(60, Math.min(maxBoundH, calculatedH));
+      }
+      el.style.width  = wData.w + 'px';
+      el.style.height = wData.h + 'px';
+    };
+
+    const onMouseUp = () => {
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+      saveState();
+    };
 
     handle.addEventListener('mousedown', (e) => {
       if (!state.editMode) return;
       e.preventDefault();
       e.stopPropagation();
-      resizing = true;
       startX = e.clientX;
       startY = e.clientY;
       startW = wData.w;
       startH = wData.h;
-    });
-
-    document.addEventListener('mousemove', (e) => {
-      if (!resizing) return;
-      const dx = e.clientX - startX;
-      const dy = e.clientY - startY;
-      if (dir === 'resize-e' || dir === 'resize-se') wData.w = Math.max(160, snap(startW + dx));
-      if (dir === 'resize-s' || dir === 'resize-se') wData.h = Math.max(60, snap(startH + dy));
-      el.style.width  = wData.w + 'px';
-      el.style.height = wData.h + 'px';
-    });
-
-    document.addEventListener('mouseup', () => {
-      if (!resizing) return;
-      resizing = false;
-      saveState();
+      document.addEventListener('mousemove', onMouseMove);
+      document.addEventListener('mouseup', onMouseUp);
     });
   });
 }
@@ -518,17 +641,25 @@ addWidgetBtn.addEventListener('click', () => {
   Object.entries(WIDGET_DEFS).forEach(([type, def]) => {
     const btn = document.createElement('button');
     btn.className = 'picker-item';
-    btn.innerHTML = `<span>${def.label}</span>`;
+    btn.setAttribute('aria-label', `Append single instance configuration of standard ${def.label} module item interface block`);
+    const txtSpan = document.createElement('span');
+    txtSpan.textContent = def.label;
+    btn.appendChild(txtSpan);
     btn.addEventListener('click', () => {
       addWidget(type);
       widgetPicker.classList.remove('visible');
+      restoreOverlayFocus();
     });
     pickerList.appendChild(btn);
   });
   widgetPicker.classList.add('visible');
+  trackOverlayOpening(widgetPicker);
 });
 
-pickerClose.addEventListener('click', () => widgetPicker.classList.remove('visible'));
+pickerClose.addEventListener('click', () => {
+  widgetPicker.classList.remove('visible');
+  restoreOverlayFocus();
+});
 
 function addWidget(type) {
   const def = WIDGET_DEFS[type];
@@ -571,12 +702,14 @@ function openWidgetSettings(id) {
 
   sidebar.classList.add('open');
   sidebarBackdrop.classList.add('open');
+  trackOverlayOpening(sidebar);
 }
 
 function closeSidebar() {
   sidebar.classList.remove('open');
   sidebarBackdrop.classList.remove('open');
   activeSidebarWidgetId = null;
+  restoreOverlayFocus();
 }
 
 sidebarClose.addEventListener('click', closeSidebar);
@@ -601,51 +734,70 @@ const openSettings   = document.getElementById('openSettings');
 const closeBtn       = document.getElementById('closeBtn');
 const saveBtn        = document.getElementById('saveBtn');
 const themeSelect    = document.getElementById('theme');
-const searchUrlInput = document.getElementById('searchUrl');
-const presetSelect   = document.getElementById('searchEnginePreset');
 
 openSettings.addEventListener('click', () => {
   themeSelect.value = globalSettings.theme;
-  searchUrlInput.value = globalSettings.searchUrl;
-  presetSelect.value = PRESETS[globalSettings.searchUrl] ? globalSettings.searchUrl : 'custom';
   modal.classList.add('open');
+  trackOverlayOpening(modal);
 });
 
-closeBtn.addEventListener('click', () => modal.classList.remove('open'));
-modal.addEventListener('click', e => { if (e.target === modal) modal.classList.remove('open'); });
-
-presetSelect.addEventListener('change', () => {
-  if (presetSelect.value !== 'custom') searchUrlInput.value = presetSelect.value;
+closeBtn.addEventListener('click', () => {
+  modal.classList.remove('open');
+  restoreOverlayFocus();
 });
-searchUrlInput.addEventListener('input', () => {
-  presetSelect.value = PRESETS[searchUrlInput.value.trim()] ? searchUrlInput.value.trim() : 'custom';
+modal.addEventListener('click', e => {
+  if (e.target === modal) {
+    modal.classList.remove('open');
+    restoreOverlayFocus();
+  }
 });
 
 saveBtn.addEventListener('click', () => {
-  globalSettings.searchUrl = searchUrlInput.value.trim() || GLOBAL_DEFAULTS.searchUrl;
   globalSettings.theme = themeSelect.value;
-  
-  localStorage.setItem('startpage-global', JSON.stringify(globalSettings));
-  
+  try {
+    localStorage.setItem('startpage-global', JSON.stringify(globalSettings));
+  } catch (e) {
+    console.error(e);
+  }
   applyTheme(globalSettings.theme);
   updateFooter();
-  
   modal.classList.remove('open');
+  restoreOverlayFocus();
 });
 
 document.addEventListener('keydown', (e) => {
   if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
     e.preventDefault();
-    if (window._searchWidgetInput) window._searchWidgetInput.focus();
+    const firstSearchNode = document.querySelector('.search-input');
+    if (firstSearchNode && typeof firstSearchNode.focus === 'function') {
+      firstSearchNode.focus();
+    }
   }
   if ((e.ctrlKey || e.metaKey) && e.key === 's') {
     e.preventDefault();
+    themeSelect.value = globalSettings.theme;
     modal.classList.add('open');
+    trackOverlayOpening(modal);
   }
   if (e.key === 'Escape') {
-    modal.classList.remove('open');
-    closeSidebar();
-    widgetPicker.classList.remove('visible');
+    if (modal.classList.contains('open')) {
+      modal.classList.remove('open');
+      restoreOverlayFocus();
+    }
+    if (sidebar.classList.contains('open')) {
+      closeSidebar();
+    }
+    if (widgetPicker.classList.contains('visible')) {
+      widgetPicker.classList.remove('visible');
+      restoreOverlayFocus();
+    }
+  }
+  if (modal.classList.contains('open')) {
+    handleFocusTrapping(e, modal);
+  } else if (sidebar.classList.contains('open')) {
+    handleFocusTrapping(e, sidebar);
+  } else if (widgetPicker.classList.contains('visible')) {
+    handleFocusTrapping(e, widgetPicker);
   }
 });
 
